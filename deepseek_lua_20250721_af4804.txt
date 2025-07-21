@@ -1,0 +1,1024 @@
+--[[
+    Advanced Roblox Logger & Player Utility GUI
+    Features:
+    - Real-time event logging (remotes, deaths, respawns, etc.)
+    - Organized player list with detailed player interaction options
+    - Player teleport, spectate, ESP, tracers, and more
+    - Customizable UI with toggle options
+    - Search functionality for both logs and players
+]]
+
+-- Services
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
+local TweenService = game:GetService("TweenService")
+
+-- Player variables
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Create main screen GUI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AdvancedLogger"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = PlayerGui
+
+-- Main frame
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0.4, 0, 0.6, 0)
+MainFrame.Position = UDim2.new(0.3, 0, 0.2, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+MainFrame.BorderSizePixel = 0
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+
+-- Corner for rounded edges
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.Parent = MainFrame
+
+-- Top bar
+local TopBar = Instance.new("Frame")
+TopBar.Name = "TopBar"
+TopBar.Size = UDim2.new(1, 0, 0.08, 0)
+TopBar.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+TopBar.BorderSizePixel = 0
+TopBar.Parent = MainFrame
+
+local Title = Instance.new("TextLabel")
+Title.Name = "Title"
+Title.Text = "Advanced Logger"
+Title.Size = UDim2.new(0.5, 0, 1, 0)
+Title.Position = UDim2.new(0.02, 0, 0, 0)
+Title.BackgroundTransparency = 1
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 16
+Title.Parent = TopBar
+
+-- Close button
+local CloseButton = Instance.new("TextButton")
+CloseButton.Name = "CloseButton"
+CloseButton.Text = "X"
+CloseButton.Size = UDim2.new(0.1, 0, 1, 0)
+CloseButton.Position = UDim2.new(0.9, 0, 0, 0)
+CloseButton.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.TextSize = 16
+CloseButton.Parent = TopBar
+
+UICorner:Clone().Parent = CloseButton
+
+-- Tabs
+local Tabs = Instance.new("Frame")
+Tabs.Name = "Tabs"
+Tabs.Size = UDim2.new(1, 0, 0.08, 0)
+Tabs.Position = UDim2.new(0, 0, 0.08, 0)
+Tabs.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+Tabs.BorderSizePixel = 0
+Tabs.Parent = MainFrame
+
+local LogsTab = Instance.new("TextButton")
+LogsTab.Name = "LogsTab"
+LogsTab.Text = "Logs"
+LogsTab.Size = UDim2.new(0.3, 0, 1, 0)
+LogsTab.Position = UDim2.new(0, 0, 0, 0)
+LogsTab.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+LogsTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+LogsTab.Font = Enum.Font.Gotham
+LogsTab.TextSize = 14
+LogsTab.Parent = Tabs
+
+local PlayersTab = Instance.new("TextButton")
+PlayersTab.Name = "PlayersTab"
+PlayersTab.Text = "Players"
+PlayersTab.Size = UDim2.new(0.3, 0, 1, 0)
+PlayersTab.Position = UDim2.new(0.3, 0, 0, 0)
+PlayersTab.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+PlayersTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+PlayersTab.Font = Enum.Font.Gotham
+PlayersTab.TextSize = 14
+PlayersTab.Parent = Tabs
+
+local SettingsTab = Instance.new("TextButton")
+SettingsTab.Name = "SettingsTab"
+SettingsTab.Text = "Settings"
+SettingsTab.Size = UDim2.new(0.3, 0, 1, 0)
+SettingsTab.Position = UDim2.new(0.6, 0, 0, 0)
+SettingsTab.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+SettingsTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+SettingsTab.Font = Enum.Font.Gotham
+SettingsTab.TextSize = 14
+SettingsTab.Parent = Tabs
+
+-- Search bar
+local SearchBar = Instance.new("TextBox")
+SearchBar.Name = "SearchBar"
+SearchBar.Size = UDim2.new(0.4, 0, 1, 0)
+SearchBar.Position = UDim2.new(0.6, 0, 0, 0)
+SearchBar.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+SearchBar.TextColor3 = Color3.fromRGB(255, 255, 255)
+SearchBar.PlaceholderText = "Search..."
+SearchBar.Font = Enum.Font.Gotham
+SearchBar.TextSize = 14
+SearchBar.Parent = Tabs
+
+-- Content frames
+local LogsFrame = Instance.new("ScrollingFrame")
+LogsFrame.Name = "LogsFrame"
+LogsFrame.Size = UDim2.new(1, 0, 0.84, 0)
+LogsFrame.Position = UDim2.new(0, 0, 0.16, 0)
+LogsFrame.BackgroundTransparency = 1
+LogsFrame.ScrollBarThickness = 6
+LogsFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+LogsFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+LogsFrame.Parent = MainFrame
+
+local PlayersFrame = Instance.new("ScrollingFrame")
+PlayersFrame.Name = "PlayersFrame"
+PlayersFrame.Size = UDim2.new(1, 0, 0.84, 0)
+PlayersFrame.Position = UDim2.new(0, 0, 0.16, 0)
+PlayersFrame.BackgroundTransparency = 1
+PlayersFrame.ScrollBarThickness = 6
+PlayersFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+PlayersFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+PlayersFrame.Visible = false
+PlayersFrame.Parent = MainFrame
+
+local SettingsFrame = Instance.new("ScrollingFrame")
+SettingsFrame.Name = "SettingsFrame"
+SettingsFrame.Size = UDim2.new(1, 0, 0.84, 0)
+SettingsFrame.Position = UDim2.new(0, 0, 0.16, 0)
+SettingsFrame.BackgroundTransparency = 1
+SettingsFrame.ScrollBarThickness = 6
+SettingsFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+SettingsFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+SettingsFrame.Visible = false
+SettingsFrame.Parent = MainFrame
+
+-- Logs list layout
+local LogsListLayout = Instance.new("UIListLayout")
+LogsListLayout.Name = "LogsListLayout"
+LogsListLayout.Padding = UDim.new(0, 5)
+LogsListLayout.Parent = LogsFrame
+
+-- Players list layout
+local PlayersListLayout = Instance.new("UIListLayout")
+PlayersListLayout.Name = "PlayersListLayout"
+PlayersListLayout.Padding = UDim.new(0, 5)
+PlayersListLayout.Parent = PlayersFrame
+
+-- Settings list layout
+local SettingsListLayout = Instance.new("UIListLayout")
+SettingsListLayout.Name = "SettingsListLayout"
+SettingsListLayout.Padding = UDim.new(0, 5)
+SettingsListLayout.Parent = SettingsFrame
+
+-- Log template
+local LogTemplate = Instance.new("Frame")
+LogTemplate.Name = "LogTemplate"
+LogTemplate.Size = UDim2.new(1, -20, 0, 30)
+LogTemplate.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+LogTemplate.BorderSizePixel = 0
+LogTemplate.Parent = nil
+
+local LogTime = Instance.new("TextLabel")
+LogTime.Name = "LogTime"
+LogTime.Size = UDim2.new(0.15, 0, 1, 0)
+LogTime.Position = UDim2.new(0, 0, 0, 0)
+LogTime.BackgroundTransparency = 1
+LogTime.TextColor3 = Color3.fromRGB(200, 200, 200)
+LogTime.TextXAlignment = Enum.TextXAlignment.Left
+LogTime.Font = Enum.Font.Gotham
+LogTime.TextSize = 12
+LogTime.Parent = LogTemplate
+
+local LogType = Instance.new("TextLabel")
+LogType.Name = "LogType"
+LogType.Size = UDim2.new(0.15, 0, 1, 0)
+LogType.Position = UDim2.new(0.15, 0, 0, 0)
+LogType.BackgroundTransparency = 1
+LogType.TextColor3 = Color3.fromRGB(255, 255, 255)
+LogType.TextXAlignment = Enum.TextXAlignment.Left
+LogType.Font = Enum.Font.GothamBold
+LogType.TextSize = 12
+LogType.Parent = LogTemplate
+
+local LogContent = Instance.new("TextLabel")
+LogContent.Name = "LogContent"
+LogContent.Size = UDim2.new(0.7, 0, 1, 0)
+LogContent.Position = UDim2.new(0.3, 0, 0, 0)
+LogContent.BackgroundTransparency = 1
+LogContent.TextColor3 = Color3.fromRGB(255, 255, 255)
+LogContent.TextXAlignment = Enum.TextXAlignment.Left
+LogContent.Font = Enum.Font.Gotham
+LogContent.TextSize = 12
+LogContent.TextWrapped = true
+LogContent.Parent = LogTemplate
+
+-- Player template
+local PlayerTemplate = Instance.new("TextButton")
+PlayerTemplate.Name = "PlayerTemplate"
+PlayerTemplate.Size = UDim2.new(1, -20, 0, 40)
+PlayerTemplate.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+PlayerTemplate.Text = ""
+PlayerTemplate.AutoButtonColor = false
+PlayerTemplate.Parent = nil
+
+local PlayerName = Instance.new("TextLabel")
+PlayerName.Name = "PlayerName"
+PlayerName.Size = UDim2.new(0.6, 0, 0.5, 0)
+PlayerName.Position = UDim2.new(0.05, 0, 0.1, 0)
+PlayerName.BackgroundTransparency = 1
+PlayerName.TextColor3 = Color3.fromRGB(255, 255, 255)
+PlayerName.TextXAlignment = Enum.TextXAlignment.Left
+PlayerName.Font = Enum.Font.GothamBold
+PlayerName.TextSize = 14
+PlayerName.Parent = PlayerTemplate
+
+local PlayerUserId = Instance.new("TextLabel")
+PlayerUserId.Name = "PlayerUserId"
+PlayerUserId.Size = UDim2.new(0.6, 0, 0.4, 0)
+PlayerUserId.Position = UDim2.new(0.05, 0, 0.5, 0)
+PlayerUserId.BackgroundTransparency = 1
+PlayerUserId.TextColor3 = Color3.fromRGB(200, 200, 200)
+PlayerUserId.TextXAlignment = Enum.TextXAlignment.Left
+PlayerUserId.Font = Enum.Font.Gotham
+PlayerUserId.TextSize = 12
+PlayerUserId.Parent = PlayerTemplate
+
+local PlayerStatus = Instance.new("TextLabel")
+PlayerStatus.Name = "PlayerStatus"
+PlayerStatus.Size = UDim2.new(0.3, 0, 0.5, 0)
+PlayerStatus.Position = UDim2.new(0.65, 0, 0.25, 0)
+PlayerStatus.BackgroundTransparency = 1
+PlayerStatus.TextColor3 = Color3.fromRGB(100, 255, 100)
+PlayerStatus.TextXAlignment = Enum.TextXAlignment.Right
+PlayerStatus.Font = Enum.Font.Gotham
+PlayerStatus.TextSize = 12
+PlayerStatus.Parent = PlayerTemplate
+
+-- Player menu (appears when clicking a player)
+local PlayerMenu = Instance.new("Frame")
+PlayerMenu.Name = "PlayerMenu"
+PlayerMenu.Size = UDim2.new(0.3, 0, 0.5, 0)
+PlayerMenu.Position = UDim2.new(1.05, 0, 0, 0)
+PlayerMenu.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+PlayerMenu.BorderSizePixel = 0
+PlayerMenu.Visible = false
+PlayerMenu.Parent = MainFrame
+
+local PlayerMenuTitle = Instance.new("TextLabel")
+PlayerMenuTitle.Name = "PlayerMenuTitle"
+PlayerMenuTitle.Size = UDim2.new(1, 0, 0.1, 0)
+PlayerMenuTitle.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
+PlayerMenuTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+PlayerMenuTitle.Font = Enum.Font.GothamBold
+PlayerMenuTitle.TextSize = 14
+PlayerMenuTitle.Parent = PlayerMenu
+
+local PlayerMenuList = Instance.new("ScrollingFrame")
+PlayerMenuList.Name = "PlayerMenuList"
+PlayerMenuList.Size = UDim2.new(1, 0, 0.9, 0)
+PlayerMenuList.Position = UDim2.new(0, 0, 0.1, 0)
+PlayerMenuList.BackgroundTransparency = 1
+PlayerMenuList.ScrollBarThickness = 6
+PlayerMenuList.AutomaticCanvasSize = Enum.AutomaticSize.Y
+PlayerMenuList.CanvasSize = UDim2.new(0, 0, 0, 0)
+PlayerMenuList.Parent = PlayerMenu
+
+local PlayerMenuListLayout = Instance.new("UIListLayout")
+PlayerMenuListLayout.Name = "PlayerMenuListLayout"
+PlayerMenuListLayout.Padding = UDim.new(0, 5)
+PlayerMenuListLayout.Parent = PlayerMenuList
+
+-- Player menu button template
+local PlayerMenuButtonTemplate = Instance.new("TextButton")
+PlayerMenuButtonTemplate.Name = "PlayerMenuButtonTemplate"
+PlayerMenuButtonTemplate.Size = UDim2.new(1, -10, 0, 30)
+PlayerMenuButtonTemplate.Position = UDim2.new(0, 5, 0, 0)
+PlayerMenuButtonTemplate.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+PlayerMenuButtonTemplate.TextColor3 = Color3.fromRGB(255, 255, 255)
+PlayerMenuButtonTemplate.Font = Enum.Font.Gotham
+PlayerMenuButtonTemplate.TextSize = 14
+PlayerMenuButtonTemplate.Parent = nil
+
+-- Settings options
+local Settings = {
+    LogRemotes = true,
+    LogPlayerEvents = true,
+    LogGameEvents = true,
+    ESPEnabled = false,
+    TracersEnabled = false,
+    AutoRefreshPlayers = true,
+    LogColors = {
+        Remote = Color3.fromRGB(255, 100, 100),
+        Player = Color3.fromRGB(100, 200, 255),
+        Game = Color3.fromRGB(100, 255, 100),
+        Warning = Color3.fromRGB(255, 200, 100),
+        Error = Color3.fromRGB(255, 100, 100)
+    }
+}
+
+-- ESP and Tracer variables
+local ESPFolder = Instance.new("Folder")
+ESPFolder.Name = "ESP"
+ESPFolder.Parent = ScreenGui
+
+local TracerFolder = Instance.new("Folder")
+TracerFolder.Name = "Tracers"
+TracerFolder.Parent = ScreenGui
+
+local ESPConnections = {}
+local TracerConnections = {}
+
+-- Utility functions
+local function formatTime()
+    return os.date("%H:%M:%S")
+end
+
+local function createLog(logType, content)
+    if not LogsFrame then return end
+    
+    local newLog = LogTemplate:Clone()
+    newLog.LogTime.Text = formatTime()
+    newLog.LogType.Text = logType
+    newLog.LogContent.Text = content
+    
+    -- Set color based on log type
+    if Settings.LogColors[logType] then
+        newLog.LogType.TextColor3 = Settings.LogColors[logType]
+    else
+        newLog.LogType.TextColor3 = Color3.fromRGB(255, 255, 255)
+    end
+    
+    newLog.Parent = LogsFrame
+    LogsFrame.CanvasPosition = Vector2.new(0, LogsFrame.AbsoluteCanvasSize.Y)
+end
+
+local function createPlayerButton(player)
+    if not PlayersFrame then return end
+    
+    local newPlayerButton = PlayerTemplate:Clone()
+    newPlayerButton.PlayerName.Text = player.Name
+    newPlayerButton.PlayerUserId.Text = "UserID: " .. player.UserId
+    
+    -- Update status
+    local function updateStatus()
+        if player:GetAttribute("Dead") then
+            newPlayerButton.PlayerStatus.Text = "Dead"
+            newPlayerButton.PlayerStatus.TextColor3 = Color3.fromRGB(255, 100, 100)
+        else
+            newPlayerButton.PlayerStatus.Text = "Alive"
+            newPlayerButton.PlayerStatus.TextColor3 = Color3.fromRGB(100, 255, 100)
+        end
+    end
+    
+    -- Initial status
+    updateStatus()
+    
+    -- Listen for status changes
+    player:GetAttributeChangedSignal("Dead"):Connect(updateStatus)
+    
+    -- Player clicked
+    newPlayerButton.MouseButton1Click:Connect(function()
+        -- Hide any existing player menu
+        PlayerMenu.Visible = false
+        
+        -- Position menu
+        local absolutePosition = newPlayerButton.AbsolutePosition
+        local absoluteSize = newPlayerButton.AbsoluteSize
+        local menuPosition = UDim2.new(0, absolutePosition.X + absoluteSize.X + 5, 0, absolutePosition.Y - PlayersFrame.CanvasPosition.Y)
+        
+        PlayerMenu.Position = menuPosition
+        PlayerMenu.Visible = true
+        PlayerMenuTitle.Text = player.Name
+        
+        -- Clear previous buttons
+        for _, child in ipairs(PlayerMenuList:GetChildren()) do
+            if child:IsA("TextButton") then
+                child:Destroy()
+            end
+        end
+        
+        -- Create player actions
+        local teleportButton = PlayerMenuButtonTemplate:Clone()
+        teleportButton.Text = "Teleport to Player"
+        teleportButton.MouseButton1Click:Connect(function()
+            LocalPlayer.Character:SetPrimaryPartCFrame(player.Character:GetPrimaryPartCFrame())
+            createLog("Player", "Teleported to " .. player.Name)
+            PlayerMenu.Visible = false
+        end)
+        teleportButton.Parent = PlayerMenuList
+        
+        local walkToButton = PlayerMenuButtonTemplate:Clone()
+        walkToButton.Text = "Walk to Player"
+        walkToButton.MouseButton1Click:Connect(function()
+            local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid:MoveTo(player.Character:GetPrimaryPartCFrame().Position)
+                createLog("Player", "Walking to " .. player.Name)
+            end
+            PlayerMenu.Visible = false
+        end)
+        walkToButton.Parent = PlayerMenuList
+        
+        local spectateButton = PlayerMenuButtonTemplate:Clone()
+        spectateButton.Text = "Spectate Player"
+        spectateButton.MouseButton1Click:Connect(function()
+            LocalPlayer.CameraMode = Enum.CameraMode.LockFirstPerson
+            workspace.CurrentCamera.CameraSubject = player.Character:FindFirstChildOfClass("Humanoid")
+            createLog("Player", "Spectating " .. player.Name)
+            PlayerMenu.Visible = false
+        end)
+        spectateButton.Parent = PlayerMenuList
+        
+        local unspectateButton = PlayerMenuButtonTemplate:Clone()
+        unspectateButton.Text = "Stop Spectating"
+        unspectateButton.MouseButton1Click:Connect(function()
+            LocalPlayer.CameraMode = Enum.CameraMode.Classic
+            workspace.CurrentCamera.CameraSubject = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            createLog("Player", "Stopped spectating")
+            PlayerMenu.Visible = false
+        end)
+        unspectateButton.Parent = PlayerMenuList
+        
+        local espButton = PlayerMenuButtonTemplate:Clone()
+        espButton.Text = "Toggle ESP"
+        espButton.MouseButton1Click:Connect(function()
+            Settings.ESPEnabled = not Settings.ESPEnabled
+            updateESP(player)
+            createLog("Player", (Settings.ESPEnabled and "Enabled" or "Disabled") .. " ESP for " .. player.Name)
+            PlayerMenu.Visible = false
+        end)
+        espButton.Parent = PlayerMenuList
+        
+        local tracerButton = PlayerMenuButtonTemplate:Clone()
+        tracerButton.Text = "Toggle Tracer"
+        tracerButton.MouseButton1Click:Connect(function()
+            Settings.TracersEnabled = not Settings.TracersEnabled
+            updateTracer(player)
+            createLog("Player", (Settings.TracersEnabled and "Enabled" or "Disabled") .. " Tracer for " .. player.Name)
+            PlayerMenu.Visible = false
+        end)
+        tracerButton.Parent = PlayerMenuList
+        
+        local copyNameButton = PlayerMenuButtonTemplate:Clone()
+        copyNameButton.Text = "Copy Name"
+        copyNameButton.MouseButton1Click:Connect(function()
+            setclipboard(player.Name)
+            createLog("Player", "Copied " .. player.Name .. " to clipboard")
+            PlayerMenu.Visible = false
+        end)
+        copyNameButton.Parent = PlayerMenuList
+        
+        local copyUserIdButton = PlayerMenuButtonTemplate:Clone()
+        copyUserIdButton.Text = "Copy UserID"
+        copyUserIdButton.MouseButton1Click:Connect(function()
+            setclipboard(tostring(player.UserId))
+            createLog("Player", "Copied " .. player.UserId .. " to clipboard")
+            PlayerMenu.Visible = false
+        end)
+        copyUserIdButton.Parent = PlayerMenuList
+    end)
+    
+    newPlayerButton.Parent = PlayersFrame
+end
+
+local function updateESP(player)
+    -- Clear existing ESP
+    if ESPConnections[player] then
+        for _, connection in pairs(ESPConnections[player]) do
+            connection:Disconnect()
+        end
+        ESPConnections[player] = nil
+    end
+    
+    local espPart = ESPFolder:FindFirstChild(player.Name)
+    if espPart then
+        espPart:Destroy()
+    end
+    
+    if not Settings.ESPEnabled then return end
+    
+    -- Create new ESP
+    local character = player.Character or player.CharacterAdded:Wait()
+    
+    local highlight = Instance.new("Highlight")
+    highlight.Name = player.Name
+    highlight.Adornee = character
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.FillColor = Color3.fromRGB(255, 255, 255)
+    highlight.FillTransparency = 0.8
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Parent = ESPFolder
+    
+    -- Track character changes
+    ESPConnections[player] = {}
+    
+    table.insert(ESPConnections[player], player.CharacterAdded:Connect(function(newChar)
+        highlight.Adornee = newChar
+    end)
+    
+    table.insert(ESPConnections[player], player.CharacterRemoving:Connect(function()
+        highlight.Adornee = nil
+    end))
+end
+
+local function updateTracer(player)
+    -- Clear existing tracer
+    if TracerConnections[player] then
+        for _, connection in pairs(TracerConnections[player]) do
+            connection:Disconnect()
+        end
+        TracerConnections[player] = nil
+    end
+    
+    local tracer = TracerFolder:FindFirstChild(player.Name)
+    if tracer then
+        tracer:Destroy()
+    end
+    
+    if not Settings.TracersEnabled then return end
+    
+    -- Create new tracer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local rootPart = character:WaitForChild("HumanoidRootPart")
+    
+    local tracerLine = Instance.new("Frame")
+    tracerLine.Name = player.Name
+    tracerLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    tracerLine.BorderSizePixel = 0
+    tracerLine.Size = UDim2.new(0, 2, 0, 0)
+    tracerLine.AnchorPoint = Vector2.new(0.5, 0.5)
+    tracerLine.Parent = TracerFolder
+    
+    -- Track character changes
+    TracerConnections[player] = {}
+    
+    table.insert(TracerConnections[player], player.CharacterAdded:Connect(function(newChar)
+        rootPart = newChar:WaitForChild("HumanoidRootPart")
+    end))
+    
+    -- Update line position
+    table.insert(TracerConnections[player], RunService.RenderStepped:Connect(function()
+        if rootPart and rootPart.Parent then
+            local rootPos, onScreen = workspace.CurrentCamera:WorldToViewportPoint(rootPart.Position)
+            
+            if onScreen then
+                local mousePos = UserInputService:GetMouseLocation()
+                local distance = (Vector2.new(rootPos.X, rootPos.Y) - mousePos
+                local angle = math.atan2(distance.Y, distance.X)
+                
+                tracerLine.Position = UDim2.new(0, mousePos.X, 0, mousePos.Y)
+                tracerLine.Rotation = math.deg(angle)
+                tracerLine.Size = UDim2.new(0, distance.Magnitude, 0, 2)
+                tracerLine.Visible = true
+            else
+                tracerLine.Visible = false
+            end
+        else
+            tracerLine.Visible = false
+        end
+    end))
+end
+
+local function refreshPlayers()
+    -- Clear existing players
+    for _, child in ipairs(PlayersFrame:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+    
+    -- Add current players
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            createPlayerButton(player)
+        end
+    end
+end
+
+local function createSettings()
+    -- Clear existing settings
+    for _, child in ipairs(SettingsFrame:GetChildren()) do
+        if child:IsA("Frame") then
+            child:Destroy()
+        end
+    end
+    
+    -- Setting template
+    local SettingTemplate = Instance.new("Frame")
+    SettingTemplate.Name = "SettingTemplate"
+    SettingTemplate.Size = UDim2.new(1, -20, 0, 30)
+    SettingTemplate.BackgroundTransparency = 1
+    SettingTemplate.Parent = nil
+    
+    local SettingName = Instance.new("TextLabel")
+    SettingName.Name = "SettingName"
+    SettingName.Size = UDim2.new(0.7, 0, 1, 0)
+    SettingName.Position = UDim2.new(0, 0, 0, 0)
+    SettingName.BackgroundTransparency = 1
+    SettingName.TextColor3 = Color3.fromRGB(255, 255, 255)
+    SettingName.TextXAlignment = Enum.TextXAlignment.Left
+    SettingName.Font = Enum.Font.Gotham
+    SettingName.TextSize = 14
+    SettingName.Parent = SettingTemplate
+    
+    local ToggleButton = Instance.new("TextButton")
+    ToggleButton.Name = "ToggleButton"
+    ToggleButton.Size = UDim2.new(0.25, 0, 0.8, 0)
+    ToggleButton.Position = UDim2.new(0.75, 0, 0.1, 0)
+    ToggleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+    ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ToggleButton.Font = Enum.Font.Gotham
+    ToggleButton.TextSize = 14
+    ToggleButton.Parent = SettingTemplate
+    
+    -- Create settings
+    local logRemotesSetting = SettingTemplate:Clone()
+    logRemotesSetting.SettingName.Text = "Log Remote Events"
+    logRemotesSetting.ToggleButton.Text = Settings.LogRemotes and "ON" or "OFF"
+    logRemotesSetting.ToggleButton.BackgroundColor3 = Settings.LogRemotes and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
+    logRemotesSetting.ToggleButton.MouseButton1Click:Connect(function()
+        Settings.LogRemotes = not Settings.LogRemotes
+        logRemotesSetting.ToggleButton.Text = Settings.LogRemotes and "ON" or "OFF"
+        logRemotesSetting.ToggleButton.BackgroundColor3 = Settings.LogRemotes and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
+    end)
+    logRemotesSetting.Parent = SettingsFrame
+    
+    local logPlayerEventsSetting = SettingTemplate:Clone()
+    logPlayerEventsSetting.SettingName.Text = "Log Player Events"
+    logPlayerEventsSetting.ToggleButton.Text = Settings.LogPlayerEvents and "ON" or "OFF"
+    logPlayerEventsSetting.ToggleButton.BackgroundColor3 = Settings.LogPlayerEvents and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
+    logPlayerEventsSetting.ToggleButton.MouseButton1Click:Connect(function()
+        Settings.LogPlayerEvents = not Settings.LogPlayerEvents
+        logPlayerEventsSetting.ToggleButton.Text = Settings.LogPlayerEvents and "ON" or "OFF"
+        logPlayerEventsSetting.ToggleButton.BackgroundColor3 = Settings.LogPlayerEvents and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
+    end)
+    logPlayerEventsSetting.Parent = SettingsFrame
+    
+    local logGameEventsSetting = SettingTemplate:Clone()
+    logGameEventsSetting.SettingName.Text = "Log Game Events"
+    logGameEventsSetting.ToggleButton.Text = Settings.LogGameEvents and "ON" or "OFF"
+    logGameEventsSetting.ToggleButton.BackgroundColor3 = Settings.LogGameEvents and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
+    logGameEventsSetting.ToggleButton.MouseButton1Click:Connect(function()
+        Settings.LogGameEvents = not Settings.LogGameEvents
+        logGameEventsSetting.ToggleButton.Text = Settings.LogGameEvents and "ON" or "OFF"
+        logGameEventsSetting.ToggleButton.BackgroundColor3 = Settings.LogGameEvents and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
+    end)
+    logGameEventsSetting.Parent = SettingsFrame
+    
+    local espSetting = SettingTemplate:Clone()
+    espSetting.SettingName.Text = "ESP"
+    espSetting.ToggleButton.Text = Settings.ESPEnabled and "ON" or "OFF"
+    espSetting.ToggleButton.BackgroundColor3 = Settings.ESPEnabled and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
+    espSetting.ToggleButton.MouseButton1Click:Connect(function()
+        Settings.ESPEnabled = not Settings.ESPEnabled
+        espSetting.ToggleButton.Text = Settings.ESPEnabled and "ON" or "OFF"
+        espSetting.ToggleButton.BackgroundColor3 = Settings.ESPEnabled and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
+        
+        -- Update ESP for all players
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                updateESP(player)
+            end
+        end
+    end)
+    espSetting.Parent = SettingsFrame
+    
+    local tracersSetting = SettingTemplate:Clone()
+    tracersSetting.SettingName.Text = "Tracers"
+    tracersSetting.ToggleButton.Text = Settings.TracersEnabled and "ON" or "OFF"
+    tracersSetting.ToggleButton.BackgroundColor3 = Settings.TracersEnabled and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
+    tracersSetting.ToggleButton.MouseButton1Click:Connect(function()
+        Settings.TracersEnabled = not Settings.TracersEnabled
+        tracersSetting.ToggleButton.Text = Settings.TracersEnabled and "ON" or "OFF"
+        tracersSetting.ToggleButton.BackgroundColor3 = Settings.TracersEnabled and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
+        
+        -- Update tracers for all players
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                updateTracer(player)
+            end
+        end
+    end)
+    tracersSetting.Parent = SettingsFrame
+    
+    local autoRefreshSetting = SettingTemplate:Clone()
+    autoRefreshSetting.SettingName.Text = "Auto Refresh Players"
+    autoRefreshSetting.ToggleButton.Text = Settings.AutoRefreshPlayers and "ON" or "OFF"
+    autoRefreshSetting.ToggleButton.BackgroundColor3 = Settings.AutoRefreshPlayers and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
+    autoRefreshSetting.ToggleButton.MouseButton1Click:Connect(function()
+        Settings.AutoRefreshPlayers = not Settings.AutoRefreshPlayers
+        autoRefreshSetting.ToggleButton.Text = Settings.AutoRefreshPlayers and "ON" or "OFF"
+        autoRefreshSetting.ToggleButton.BackgroundColor3 = Settings.AutoRefreshPlayers and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
+    end)
+    autoRefreshSetting.Parent = SettingsFrame
+    
+    local clearLogsButton = SettingTemplate:Clone()
+    clearLogsButton.SettingName.Text = "Clear Logs"
+    clearLogsButton.ToggleButton.Text = "CLEAR"
+    clearLogsButton.ToggleButton.BackgroundColor3 = Color3.fromRGB(255, 150, 50)
+    clearLogsButton.ToggleButton.MouseButton1Click:Connect(function()
+        for _, child in ipairs(LogsFrame:GetChildren()) do
+            if child:IsA("Frame") then
+                child:Destroy()
+            end
+        end
+        createLog("Game", "Logs cleared")
+    end)
+    clearLogsButton.Parent = SettingsFrame
+    
+    local refreshPlayersButton = SettingTemplate:Clone()
+    refreshPlayersButton.SettingName.Text = "Refresh Players"
+    refreshPlayersButton.ToggleButton.Text = "REFRESH"
+    refreshPlayersButton.ToggleButton.BackgroundColor3 = Color3.fromRGB(50, 150, 255)
+    refreshPlayersButton.ToggleButton.MouseButton1Click:Connect(function()
+        refreshPlayers()
+        createLog("Game", "Player list refreshed")
+    end)
+    refreshPlayersButton.Parent = SettingsFrame
+end
+
+-- Hook remote events
+local function hookRemotes()
+    -- Hook RemoteEvents
+    for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
+        if remote:IsA("RemoteEvent") then
+            local oldFireServer = remote.FireServer
+            remote.FireServer = function(self, ...)
+                if Settings.LogRemotes then
+                    local args = {...}
+                    local argsString = ""
+                    
+                    for i, arg in ipairs(args) do
+                        if typeof(arg) == "table" then
+                            argsString = argsString .. HttpService:JSONEncode(arg)
+                        else
+                            argsString = argsString .. tostring(arg)
+                        end
+                        
+                        if i < #args then
+                            argsString = argsString .. ", "
+                        end
+                    end
+                    
+                    createLog("Remote", string.format("Fired %s with args: %s", self:GetFullName(), argsString))
+                end
+                return oldFireServer(self, ...)
+            end
+        end
+    end
+    
+    -- Hook RemoteFunctions
+    for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
+        if remote:IsA("RemoteFunction") then
+            local oldInvokeServer = remote.InvokeServer
+            remote.InvokeServer = function(self, ...)
+                if Settings.LogRemotes then
+                    local args = {...}
+                    local argsString = ""
+                    
+                    for i, arg in ipairs(args) do
+                        if typeof(arg) == "table" then
+                            argsString = argsString .. HttpService:JSONEncode(arg)
+                        else
+                            argsString = argsString .. tostring(arg)
+                        end
+                        
+                        if i < #args then
+                            argsString = argsString .. ", "
+                        end
+                    end
+                    
+                    createLog("Remote", string.format("Invoked %s with args: %s", self:GetFullName(), argsString))
+                end
+                return oldInvokeServer(self, ...)
+            end
+        end
+    end
+end
+
+-- Hook player events
+local function hookPlayerEvents()
+    -- Player added
+    Players.PlayerAdded:Connect(function(player)
+        if Settings.LogPlayerEvents then
+            createLog("Player", string.format("%s joined the game (UserID: %d)", player.Name, player.UserId))
+        end
+        
+        if Settings.AutoRefreshPlayers then
+            refreshPlayers()
+        end
+        
+        -- Set up ESP and Tracers for new player
+        if player ~= LocalPlayer then
+            updateESP(player)
+            updateTracer(player)
+        end
+    end)
+    
+    -- Player removing
+    Players.PlayerRemoving:Connect(function(player)
+        if Settings.LogPlayerEvents then
+            createLog("Player", string.format("%s left the game", player.Name))
+        end
+        
+        if Settings.AutoRefreshPlayers then
+            refreshPlayers()
+        end
+        
+        -- Clean up ESP and Tracers
+        if ESPConnections[player] then
+            for _, connection in pairs(ESPConnections[player]) do
+                connection:Disconnect()
+            end
+            ESPConnections[player] = nil
+        end
+        
+        if TracerConnections[player] then
+            for _, connection in pairs(TracerConnections[player]) do
+                connection:Disconnect()
+            end
+            TracerConnections[player] = nil
+        end
+        
+        local espPart = ESPFolder:FindFirstChild(player.Name)
+        if espPart then
+            espPart:Destroy()
+        end
+        
+        local tracer = TracerFolder:FindFirstChild(player.Name)
+        if tracer then
+            tracer:Destroy()
+        end
+    end)
+    
+    -- Character added
+    LocalPlayer.CharacterAdded:Connect(function(character)
+        if Settings.LogPlayerEvents then
+            createLog("Player", "Character spawned")
+        end
+        
+        -- Set dead attribute when health reaches 0
+        local humanoid = character:WaitForChild("Humanoid")
+        humanoid.Died:Connect(function()
+            if Settings.LogPlayerEvents then
+                createLog("Player", "You died")
+            end
+            LocalPlayer:SetAttribute("Dead", true)
+        end)
+    end)
+    
+    -- Respawn
+    LocalPlayer.CharacterRemoving:Connect(function()
+        if Settings.LogPlayerEvents then
+            createLog("Player", "Respawning...")
+        end
+        LocalPlayer:SetAttribute("Dead", false)
+    end)
+end
+
+-- UI interactions
+CloseButton.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+LogsTab.MouseButton1Click:Connect(function()
+    LogsFrame.Visible = true
+    PlayersFrame.Visible = false
+    SettingsFrame.Visible = false
+    PlayerMenu.Visible = false
+    
+    LogsTab.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+    PlayersTab.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+    SettingsTab.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+end)
+
+PlayersTab.MouseButton1Click:Connect(function()
+    LogsFrame.Visible = false
+    PlayersFrame.Visible = true
+    SettingsFrame.Visible = false
+    PlayerMenu.Visible = false
+    
+    LogsTab.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+    PlayersTab.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+    SettingsTab.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+end)
+
+SettingsTab.MouseButton1Click:Connect(function()
+    LogsFrame.Visible = false
+    PlayersFrame.Visible = false
+    SettingsFrame.Visible = true
+    PlayerMenu.Visible = false
+    
+    LogsTab.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+    PlayersTab.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+    SettingsTab.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+end)
+
+-- Search functionality
+SearchBar:GetPropertyChangedSignal("Text"):Connect(function()
+    local searchText = string.lower(SearchBar.Text)
+    
+    if LogsFrame.Visible then
+        for _, log in ipairs(LogsFrame:GetChildren()) do
+            if log:IsA("Frame") then
+                local logContent = string.lower(log.LogContent.Text)
+                local logType = string.lower(log.LogType.Text)
+                
+                if string.find(logContent, searchText, 1, true) or string.find(logType, searchText, 1, true) then
+                    log.Visible = true
+                else
+                    log.Visible = false
+                end
+            end
+        end
+    elseif PlayersFrame.Visible then
+        for _, playerButton in ipairs(PlayersFrame:GetChildren()) do
+            if playerButton:IsA("TextButton") then
+                local playerName = string.lower(playerButton.PlayerName.Text)
+                
+                if string.find(playerName, searchText, 1, true) then
+                    playerButton.Visible = true
+                else
+                    playerButton.Visible = false
+                end
+            end
+        end
+    end
+end)
+
+-- Initialize
+createLog("Game", "Advanced Logger initialized")
+hookRemotes()
+hookPlayerEvents()
+refreshPlayers()
+createSettings()
+
+-- Set up ESP and Tracers for existing players
+for _, player in ipairs(Players:GetPlayers()) do
+    if player ~= LocalPlayer then
+        updateESP(player)
+        updateTracer(player)
+    end
+end
+
+-- Make GUI draggable
+local dragging
+local dragInput
+local dragStart
+local startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+TopBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+TopBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
+end)
+
+-- Hide player menu when clicking outside
+UserInputService.InputBegan:Connect(function(input, processed)
+    if not processed and input.UserInputType == Enum.UserInputType.MouseButton1 then
+        local mousePos = UserInputService:GetMouseLocation()
+        local menuPos = PlayerMenu.AbsolutePosition
+        local menuSize = PlayerMenu.AbsoluteSize
+        
+        if not (mousePos.X >= menuPos.X and mousePos.X <= menuPos.X + menuSize.X and
+               mousePos.Y >= menuPos.Y and mousePos.Y <= menuPos.Y + menuSize.Y) then
+            PlayerMenu.Visible = false
+        end
+    end
+end)
