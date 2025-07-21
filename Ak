@@ -1,14 +1,4 @@
---[[
-    Advanced Roblox Logger & Player Utility GUI
-    Features:
-    - Real-time event logging (remotes, deaths, respawns, etc.)
-    - Organized player list with detailed player interaction options
-    - Player teleport, spectate, ESP, tracers, and more
-    - Customizable UI with toggle options
-    - Search functionality for both logs and players
-]]
 
--- Services
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
